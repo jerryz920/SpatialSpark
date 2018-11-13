@@ -1,0 +1,201 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    cni.projectcalico.org/podIP: 192.3.133.19/32
+    spark-app-name: spatial-spark
+  creationTimestamp: 2018-11-03T02:53:42Z
+  labels:
+    spark-app-selector: spark-6b7c6f47dc48403fb8413f66a5b415c2
+    spark-role: driver
+  name: spatial-spark
+  namespace: spark
+  resourceVersion: "135028"
+  selfLink: /api/v1/namespaces/spark/pods/spatial-spark
+  uid: ac7e6cd5-df13-11e8-96de-fa163e017337
+spec:
+  containers:
+  - args:
+    - driver
+    env:
+    - name: SPARK_DRIVER_MEMORY
+      value: 1g
+    - name: SPARK_DRIVER_CLASS
+      value: spatialspark.main.SpatialJoinApp
+    - name: SPARK_DRIVER_ARGS
+      value: --left hdfs://hdfs-1.latte.org:8020/data/point1k.tsv --right hdfs://hdfs-1.latte.org:8020/data/nycb.tsv
+        --geom_left 1 --geom_right 0 --output hdfs://hdfs-1.latte.org:8020/data/output.tsv
+        --broadcast false --predicate within --method stp --conf 32:32:0.1 --parallel_part
+        false
+    - name: SPARK_DRIVER_BIND_ADDRESS
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: status.podIP
+    - name: SPARK_MOUNTED_CLASSPATH
+      value: /var/spark-data/spark-jars/spatial-spark.jar:/var/spark-data/spark-jars/spatial-spark.jar
+    - name: SPARK_MOUNTED_FILES_DIR
+      value: /var/spark-data/spark-files
+    - name: SPARK_JAVA_OPT_0
+      value: -Dspark.kubernetes.authenticate.submission.caCertFile=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    - name: SPARK_JAVA_OPT_1
+      value: -Dspark.kubernetes.initContainer.configMapName=spatial-spark-83daebdec2ef351f9b74de5cb03f6e65-init-config
+    - name: SPARK_JAVA_OPT_2
+      value: -Dspark.submit.deployMode=cluster
+    - name: SPARK_JAVA_OPT_3
+      value: -Dspark.driver.blockManager.port=7079
+    - name: SPARK_JAVA_OPT_4
+      value: -Dspark.kubernetes.authenticate.driver.serviceAccountName=spark
+    - name: SPARK_JAVA_OPT_5
+      value: -Dspark.app.name=spatial-spark
+    - name: SPARK_JAVA_OPT_6
+      value: -Dspark.master=k8s://https://192.3.0.7:6443
+    - name: SPARK_JAVA_OPT_7
+      value: -Dspark.driver.host=spatial-spark-83daebdec2ef351f9b74de5cb03f6e65-driver-svc.spark.svc
+    - name: SPARK_JAVA_OPT_8
+      value: -Dspark.driver.port=7078
+    - name: SPARK_JAVA_OPT_9
+      value: -Dspark.jars=http://192.3.0.7:12345/examples/spatial-spark.jar,http://192.3.0.7:12345/examples/spatial-spark.jar
+    - name: SPARK_JAVA_OPT_10
+      value: -Dspark.kubernetes.namespace=spark
+    - name: SPARK_JAVA_OPT_11
+      value: -Dspark.kubernetes.initContainer.configMapKey=spark-init.properties
+    - name: SPARK_JAVA_OPT_12
+      value: -Dspark.kubernetes.driver.pod.name=spatial-spark
+    - name: SPARK_JAVA_OPT_13
+      value: -Dspark.executor.instances=5
+    - name: SPARK_JAVA_OPT_14
+      value: -Dspark.kubernetes.executor.podNamePrefix=spatial-spark-83daebdec2ef351f9b74de5cb03f6e65
+    - name: SPARK_JAVA_OPT_15
+      value: -Dspark.app.id=spark-6b7c6f47dc48403fb8413f66a5b415c2
+    - name: SPARK_JAVA_OPT_16
+      value: -Dspark.kubernetes.container.image=spark:v2.3
+    image: spark:v2.3
+    imagePullPolicy: IfNotPresent
+    name: spark-kubernetes-driver
+    resources:
+      limits:
+        memory: 1408Mi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+    volumeMounts:
+    - mountPath: /var/spark-data/spark-jars
+      name: download-jars-volume
+    - mountPath: /var/spark-data/spark-files
+      name: download-files-volume
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: spark-token-92vtq
+      readOnly: true
+  dnsPolicy: ClusterFirst
+  initContainers:
+  - args:
+    - init
+    - /etc/spark-init/spark-init.properties
+    image: spark:v2.3
+    imagePullPolicy: IfNotPresent
+    name: spark-init
+    resources: {}
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+    volumeMounts:
+    - mountPath: /etc/spark-init
+      name: spark-init-properties
+    - mountPath: /var/spark-data/spark-jars
+      name: download-jars-volume
+    - mountPath: /var/spark-data/spark-files
+      name: download-files-volume
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: spark-token-92vtq
+      readOnly: true
+  nodeName: worker5
+  priority: 0
+  restartPolicy: Never
+  schedulerName: default-scheduler
+  securityContext: {}
+  serviceAccount: spark
+  serviceAccountName: spark
+  terminationGracePeriodSeconds: 30
+  tolerations:
+  - effect: NoExecute
+    key: node.kubernetes.io/not-ready
+    operator: Exists
+    tolerationSeconds: 300
+  - effect: NoExecute
+    key: node.kubernetes.io/unreachable
+    operator: Exists
+    tolerationSeconds: 300
+  volumes:
+  - configMap:
+      defaultMode: 420
+      items:
+      - key: spark-init.properties
+        path: spark-init.properties
+      name: spatial-spark-83daebdec2ef351f9b74de5cb03f6e65-init-config
+    name: spark-init-properties
+  - emptyDir: {}
+    name: download-jars-volume
+  - emptyDir: {}
+    name: download-files-volume
+  - name: spark-token-92vtq
+    secret:
+      defaultMode: 420
+      secretName: spark-token-92vtq
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: 2018-11-03T02:53:47Z
+    reason: PodCompleted
+    status: "True"
+    type: Initialized
+  - lastProbeTime: null
+    lastTransitionTime: 2018-11-03T02:55:07Z
+    reason: PodCompleted
+    status: "False"
+    type: Ready
+  - lastProbeTime: null
+    lastTransitionTime: 2018-11-03T02:55:07Z
+    reason: PodCompleted
+    status: "False"
+    type: ContainersReady
+  - lastProbeTime: null
+    lastTransitionTime: 2018-11-03T02:53:42Z
+    status: "True"
+    type: PodScheduled
+  containerStatuses:
+  - containerID: docker://e50e89e4d18b28a028672490b9692baa07a35d242e00301ec517de01ab9cda33
+    image: spark:v2.3
+    imageID: docker://sha256:208754df02d9f8ee8f476ad8fa28b7f0a41fad7e9d615550b1b6380b873f728d
+    lastState: {}
+    name: spark-kubernetes-driver
+    ready: false
+    restartCount: 0
+    state:
+      terminated:
+        containerID: docker://e50e89e4d18b28a028672490b9692baa07a35d242e00301ec517de01ab9cda33
+        exitCode: 0
+        finishedAt: 2018-11-03T02:55:06Z
+        reason: Completed
+        startedAt: 2018-11-03T02:53:48Z
+  hostIP: 192.3.0.12
+  initContainerStatuses:
+  - containerID: docker://1e46ec4f3531a91a9cefc179bec65bc4b26e98244fe3d474d8f5b3a8b8deda7a
+    image: spark:v2.3
+    imageID: docker://sha256:208754df02d9f8ee8f476ad8fa28b7f0a41fad7e9d615550b1b6380b873f728d
+    lastState: {}
+    name: spark-init
+    ready: true
+    restartCount: 0
+    state:
+      terminated:
+        containerID: docker://1e46ec4f3531a91a9cefc179bec65bc4b26e98244fe3d474d8f5b3a8b8deda7a
+        exitCode: 0
+        finishedAt: 2018-11-03T02:53:46Z
+        reason: Completed
+        startedAt: 2018-11-03T02:53:44Z
+  phase: Succeeded
+  podIP: 192.3.133.19
+  qosClass: Burstable
+  startTime: 2018-11-03T02:53:42Z
